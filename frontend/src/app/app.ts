@@ -5,6 +5,8 @@ import { JsonPipe } from '@angular/common';
 
 type IncaDialect = 'Datalog' | 'FunctionalInca' | 'OODL' | 'Souffle';
 type IncaEngine = 'Viatra' | 'Souffle' | 'Interpreter' | 'DDLog' | 'Ascent';
+type IrKind = 'lowered' | 'optimized';
+type IrMode = 'hidden' | IrKind;
 
 interface IncaQuery {
   relName: string;
@@ -15,7 +17,7 @@ interface IncaProgramRequest {
   code: string;
   dialect: IncaDialect;
   backend: IncaEngine;
-  query: IncaQuery;
+  query: IncaQuery | null;
 }
 
 interface ExecutionResult {
@@ -61,8 +63,14 @@ export class App {
   protected readonly isRunning = signal(false);
   protected readonly result = signal<ExecutionResult | null>(null);
   protected readonly error = signal<string | null>(null);
+  protected readonly isLoadingIr = signal(false);
+  protected readonly activeIrMode = signal<IrMode>('hidden');
+  protected readonly activeIrKind = signal<IrKind | null>(null);
+  protected readonly irCode = signal<string | null>(null);
+  protected readonly irError = signal<string | null>(null);
   protected readonly showParsedQuery = signal(false);
   private sampleLoadId = 0;
+  private irLoadId = 0;
   protected previewQuery(): IncaQuery | null {
     try {
       return this.parseQuery(this.queryText());
@@ -79,6 +87,20 @@ export class App {
     const dialect = (event.target as HTMLSelectElement).value as IncaDialect;
     this.dialect.set(dialect);
     this.loadDialectSample(dialect);
+  }
+
+  protected updateBackend(backend: IncaEngine): void {
+    this.backend.set(backend);
+    this.clearIr();
+  }
+
+  protected updateCode(code: string): void {
+    this.code.set(code);
+    this.clearIr();
+  }
+
+  protected updateQueryText(queryText: string): void {
+    this.queryText.set(queryText);
   }
 
   protected runProgram(): void {
@@ -117,12 +139,61 @@ export class App {
     });
   }
 
+  protected selectIrMode(mode: IrMode): void {
+    if (mode === 'hidden') {
+      this.hideIr();
+      return;
+    }
+
+    this.loadIr(mode);
+  }
+
+  private loadIr(kind: IrKind): void {
+    const loadId = ++this.irLoadId;
+    const payload: IncaProgramRequest = {
+      code: this.code(),
+      dialect: this.dialect(),
+      backend: this.backend(),
+      query: this.previewQuery()
+    };
+
+    this.activeIrMode.set(kind);
+    this.activeIrKind.set(kind);
+    this.isLoadingIr.set(true);
+    this.irCode.set(null);
+    this.irError.set(null);
+
+    this.http.post<ApiResult<string>>(`/api/inca/${kind}`, payload).subscribe({
+      next: (response) => {
+        if (this.irLoadId !== loadId) {
+          return;
+        }
+
+        if (response.error) {
+          this.irError.set(response.error);
+        } else {
+          this.irCode.set(response.result ?? '');
+        }
+        this.isLoadingIr.set(false);
+      },
+      error: (response) => {
+        if (this.irLoadId !== loadId) {
+          return;
+        }
+
+        this.irError.set(response.error?.error ?? `Could not load ${kind} IR.`);
+        this.isLoadingIr.set(false);
+      }
+    });
+  }
+
   private loadDialectSample(dialect: IncaDialect): void {
     const loadId = ++this.sampleLoadId;
     this.queryText.set(this.sampleQueries[dialect]);
     this.code.set(`Loading ${dialect} sample...`);
     this.error.set(null);
     this.result.set(null);
+    this.clearIr();
 
     this.http.get(`${this.sampleFiles[dialect]}?load=${loadId}`, { responseType: 'text' }).subscribe({
       next: (sample) => {
@@ -141,6 +212,22 @@ export class App {
 
   protected toggleParsedQuery(): void {
     this.showParsedQuery.update((isOpen) => !isOpen);
+  }
+
+  private clearIr(): void {
+    this.irLoadId++;
+    this.isLoadingIr.set(false);
+    this.activeIrMode.set('hidden');
+    this.activeIrKind.set(null);
+    this.irCode.set(null);
+    this.irError.set(null);
+  }
+
+  private hideIr(): void {
+    this.irLoadId++;
+    this.isLoadingIr.set(false);
+    this.activeIrMode.set('hidden');
+    this.activeIrKind.set(null);
   }
 
   protected formatCell(value: unknown): string {

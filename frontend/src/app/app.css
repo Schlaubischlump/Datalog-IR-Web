@@ -422,3 +422,152 @@ h1 {
 .preview-toggle:focus-visible span {
   color: var(--paper);
 }
+
+.ir-inspector {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  background: rgba(255, 250, 240, 0.58);
+}
+
+.ir-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: start;
+}
+
+.ir-header span {
+  display: block;
+  margin-bottom: 0.25rem;
+  font: 900 0.72rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ir-header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.ir-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.ir-actions button,
+.ir-toggle {
+  background: rgba(24, 32, 27, 0.08);
+  color: var(--ink);
+  padding: 0.75rem 0.9rem;
+}
+
+.ir-actions button:hover:not(:disabled),
+.ir-toggle:hover,
+.ir-toggle:focus-visible {
+  background: var(--accent);
+  color: var(--paper);
+}
+
+.ir-output {
+  border: 1px solid var(--line);
+  background: rgba(24, 32, 27, 0.055);
+}
+
+.ir-code {
+  max-height: 28rem;
+  overflow: auto;
+  padding: 1rem;
+  color: var(--ink);
+}
+
+.execution-progress.compact {
+  border: 0;
+  background: transparent;
+}
+
+.execution-progress.compact .spinner {
+  width: 1.9rem;
+  height: 1.9rem;
+  border-width: 0.22rem;
+}
+
+.query-run-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: end;
+}
+
+.query-field {
+  min-width: 0;
+}
+
+.run-button {
+  align-self: end;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .query-run-row {
+    grid-template-columns: 1fr;
+  }
+
+  .run-button {
+    justify-self: start;
+  }
+}
+
+.ir-segmented {
+  display: inline-grid;
+  grid-template-columns: repeat(3, auto);
+  justify-self: start;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: rgba(255, 250, 240, 0.72);
+}
+
+.ir-segmented button {
+  margin: 0;
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  padding: 0.75rem 0.95rem;
+}
+
+.ir-segmented button:last-child {
+  border-right: 0;
+}
+
+.ir-segmented button:hover:not(:disabled),
+.ir-segmented button:focus-visible {
+  background: rgba(199, 81, 47, 0.14);
+  color: var(--accent-dark);
+}
+
+.ir-segmented button.is-active {
+  background: var(--accent);
+  color: var(--paper);
+}
+
+.ir-segmented button.is-active:hover,
+.ir-segmented button.is-active:focus-visible {
+  background: var(--accent-dark);
+  color: var(--paper);
+}
+
+@media (max-width: 560px) {
+  .ir-segmented {
+    width: 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .ir-segmented button {
+    padding-inline: 0.55rem;
+  }
+}

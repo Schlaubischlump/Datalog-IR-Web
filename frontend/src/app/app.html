@@ -3,7 +3,7 @@
     <p class="eyebrow">INCA runner</p>
     <h1>Execute Datalog programs from the browser.</h1>
     <p class="intro-copy">
-      Select a dialect and backend, write a program, define a query and run it.
+      Select a dialect and engine, write a program, define a query and run it.
     </p>
   </section>
 
@@ -20,8 +20,8 @@
         </label>
 
         <label>
-          <span>Backend</span>
-          <select name="backend" [ngModel]="backend()" (ngModelChange)="backend.set($event)">
+          <span>Engine</span>
+          <select name="backend" [ngModel]="backend()" (ngModelChange)="updateBackend($event)">
             @for (option of backends; track option) {
               <option [value]="option">{{ option }}</option>
             }
@@ -33,23 +33,30 @@
         <span>Program</span>
         <textarea
           name="code"
-          [ngModel]="code()" (ngModelChange)="code.set($event)"
+          [ngModel]="code()" (ngModelChange)="updateCode($event)"
           spellcheck="false"
           placeholder="Enter the program to execute"
         ></textarea>
       </label>
 
-      <label>
-        <span>Query</span>
-        <input
-          name="queryText"
-          [ngModel]="queryText()" (ngModelChange)="queryText.set($event)"
-          type="text"
-          placeholder='R(?, 4) or main(1, "A")'
-        />
-      </label>
 
-      <div class="query-preview" [class.is-open]="showParsedQuery()">
+      <div class="query-run-row">
+        <label class="query-field">
+          <span>Query</span>
+          <input
+            name="queryText"
+            [ngModel]="queryText()" (ngModelChange)="updateQueryText($event)"
+            type="text"
+            placeholder='R(?, 4) or main(1, "A")'
+          />
+        </label>
+
+        <button class="run-button" type="submit" [disabled]="isRunning()">
+          {{ isRunning() ? 'Running...' : 'Run program' }}
+        </button>
+      </div>
+
+      <!--<div class="query-preview" [class.is-open]="showParsedQuery()">
         <button class="preview-toggle" type="button" (click)="toggleParsedQuery()" [attr.aria-expanded]="showParsedQuery()">
           <span>Parsed query</span>
           <span aria-hidden="true">{{ showParsedQuery() ? 'Hide' : 'Show' }}</span>
@@ -64,11 +71,63 @@
             }
           </div>
         }
-      </div>
+      </div>-->
 
-      <button type="submit" [disabled]="isRunning()">
-        {{ isRunning() ? 'Running...' : 'Run program' }}
-      </button>
+      <section class="ir-inspector" [class.is-open]="activeIrMode() !== 'hidden'">
+        <div class="ir-header">
+          <div>
+            <span>IR inspector</span>
+            <p>Compile the current program and inspect the generated IR on demand.</p>
+          </div>
+        </div>
+
+        <div class="ir-segmented" role="group" aria-label="IR display mode">
+          <button
+            type="button"
+            [class.is-active]="activeIrMode() === 'hidden'"
+            [attr.aria-pressed]="activeIrMode() === 'hidden'"
+            (click)="selectIrMode('hidden')"
+          >
+            Hide
+          </button>
+          <button
+            type="button"
+            [class.is-active]="activeIrMode() === 'lowered'"
+            [attr.aria-pressed]="activeIrMode() === 'lowered'"
+            (click)="selectIrMode('lowered')"
+            [disabled]="isLoadingIr() && activeIrMode() !== 'lowered'"
+          >
+            Lowered IR
+          </button>
+          <button
+            type="button"
+            [class.is-active]="activeIrMode() === 'optimized'"
+            [attr.aria-pressed]="activeIrMode() === 'optimized'"
+            (click)="selectIrMode('optimized')"
+            [disabled]="isLoadingIr() && activeIrMode() !== 'optimized'"
+          >
+            Optimized IR
+          </button>
+        </div>
+
+        @if (activeIrMode() !== 'hidden') {
+          <div class="ir-output" aria-live="polite">
+            @if (isLoadingIr()) {
+              <div class="execution-progress compact" role="status">
+                <div class="spinner" aria-hidden="true"></div>
+                <div>
+                  <strong>Generating {{ activeIrKind() }} IR</strong>
+                  <p>The compiler pipeline is running.</p>
+                </div>
+              </div>
+            } @else if (irError(); as currentIrError) {
+              <pre class="error-output">{{ currentIrError }}</pre>
+            } @else if (irCode(); as currentIrCode) {
+              <pre class="ir-code">{{ currentIrCode }}</pre>
+            }
+          </div>
+        }
+      </section>
     </form>
 
     <aside class="result-panel" aria-live="polite">

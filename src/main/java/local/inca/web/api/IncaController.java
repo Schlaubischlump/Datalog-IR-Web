@@ -19,13 +19,27 @@ public class IncaController {
     @PostMapping("/execute")
     public ResponseEntity<ApiResult<?>> execute(@RequestBody IncaProgram prog) {
         try {
-            var execRes = incaRuntimeService.execute(prog);
-            System.out.println(execRes);
-            var res = ApiResult.success(execRes);
-            return new ResponseEntity<>(res, HttpStatus.OK);
+            return new ResponseEntity<>(ApiResult.success(incaRuntimeService.execute(prog)), HttpStatus.OK);
         } catch(Exception e) {
-            var res = ApiResult.failure(e.getMessage());
-            return new ResponseEntity<>(res, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(ApiResult.failure(e.getMessage()), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("/lowered")
+    public ResponseEntity<ApiResult<?>> loweredCode(@RequestBody IncaProgram prog) {
+        try {
+            return new ResponseEntity<>(ApiResult.success(incaRuntimeService.lowered(prog)), HttpStatus.OK);
+        } catch(Exception e) {
+            return new ResponseEntity<>(ApiResult.failure(e.getMessage()), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("/optimized")
+    public ResponseEntity<ApiResult<?>> optimizedCode(@RequestBody IncaProgram prog) {
+        try {
+            return new ResponseEntity<>(ApiResult.success(incaRuntimeService.optimized(prog)), HttpStatus.OK);
+        } catch(Exception e) {
+            return new ResponseEntity<>(ApiResult.failure(e.getMessage()), HttpStatus.BAD_REQUEST);
         }
     }
 }

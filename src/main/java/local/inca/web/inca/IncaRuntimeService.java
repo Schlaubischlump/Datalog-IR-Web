@@ -9,6 +9,8 @@ import inca.frontend.functional.executor.FunctionalExecutor;
 import inca.frontend.oodl.compile.CompiledOODLUnit$;
 import inca.frontend.oodl.compile.OODLCompilerOptions;
 import inca.frontend.oodl.executor.OODLExecutor;
+import inca.ir.CompiledUnit;
+import inca.ir.Module;
 import inca.ir.execution.ThreadCount;
 import inca.souffle.frontend.executor.SouffleExecutor;
 import inca.util.compileroptions.CompilerOptions;
@@ -37,6 +39,65 @@ public class IncaRuntimeService {
 
     private <T> Seq<T> asSeq(List<T> list) {
         return Seq.from(CollectionConverters.asScala(list));
+    }
+
+    private CompiledUnit compile(IncaProgram prog) {
+        var code = prog.code();
+
+        var autoThreadCount = ThreadCount.fromOrdinal(0);
+        var executor = switch (prog.backend()) {
+            case Viatra      -> new Executor(TimelyReteBackendFactory.FIRST_ONLY_SEQUENTIAL);
+            case Souffle     -> new inca.souffle.backend.Executor(autoThreadCount);
+            case Ascent      -> new inca.ascent.backend.Executor(autoThreadCount);
+            case DDLog       -> new inca.ddlog.backend.Executor();
+            case Interpreter -> new inca.ir.execution.interpreter.Executor();
+        };
+
+        return switch (prog.dialect()) {
+            case Datalog -> {
+                var options = DatalogCompilerOptions.fromResource(DATALOG_OPTIONS);
+                var exec = new DatalogExecutor(executor);
+                yield exec.compileDatalog(code, options);
+            }
+            case FunctionalInca -> {
+                var options = FunctionalCompilerOptions.fromResource(FUNCTIONAL_OPTIONS);
+                var exec = new FunctionalExecutor(executor);
+                var compiled = exec.compileFunction(code, options);
+                compiled.setPipeline(CompiledFunctionalUnit$.MODULE$.pipeline());
+                compiled.setOptimizationPipeline(CompiledFunctionalUnit$.MODULE$.optimizationPipeline());
+                yield compiled;
+            }
+            case OODL -> {
+                var options = OODLCompilerOptions.fromResource(OODL_OPTIONS);
+                var exec = new OODLExecutor(executor);
+                var compiled = exec.compileOODL(code, options);
+                compiled.setPipeline(CompiledOODLUnit$.MODULE$.pipeline());
+                compiled.setOptimizationPipeline(CompiledOODLUnit$.MODULE$.optimizationPipeline());
+                yield compiled;
+            }
+            case Souffle -> {
+                var defaultOptions = new CompilerOptions(seqOf());
+                defaultOptions.setDefaults();
+                var exec = new SouffleExecutor(executor);
+                yield exec.compileSouffle(code, defaultOptions).mainUnit();
+            }
+        };
+    }
+
+    public String optimized(IncaProgram prog) {
+        var s = new StringBuilder();
+        for (Module mod: CollectionConverters.asJava(compile(prog).closed())) {
+            s.append(mod.toString());
+        };
+        return s.toString();
+    }
+
+    public String lowered(IncaProgram prog) {
+        var s = new StringBuilder();
+        for (Module mod: CollectionConverters.asJava(compile(prog).lowered())) {
+            s.append(mod.toString());
+        };
+        return s.toString();
     }
 
     public ExecutionResult execute(IncaProgram prog) {
@@ -94,8 +155,7 @@ public class IncaRuntimeService {
     }
 
     private ExecutionResult toExecutionResult(inca.ir.execution.Relation relation) {
-        var columns = new ArrayList<String>();
-        CollectionConverters.asJava(relation.parameterNames()).forEach(columns::add);
+        var columns = new ArrayList<>(CollectionConverters.asJava(relation.parameterNames()));
 
         var rows = new ArrayList<List<Object>>();
         CollectionConverters.asJava(relation.matches()).forEach(match -> {
