@@ -1,5 +1,6 @@
 package local.inca.web.inca;
 
+import inca.frontend.datalog.compile.CompiledDatalogUnit$;
 import inca.frontend.datalog.compile.DatalogCompilerOptions;
 import inca.frontend.datalog.executor.DatalogExecutor;
 import inca.frontend.functional.compile.CompiledFunctionalUnit;
@@ -123,6 +124,8 @@ public class IncaRuntimeService {
                 var options = DatalogCompilerOptions.fromResource(DATALOG_OPTIONS);
                 var exec = new DatalogExecutor(executor);
                 var compiled = exec.compileDatalog(code, options);
+                compiled.setPipeline(CompiledDatalogUnit$.MODULE$.pipeline());
+                compiled.setOptimizationPipeline(CompiledDatalogUnit$.MODULE$.optimizationPipeline());
                 var loaded = exec.loadDatalog(compiled);
                 yield loaded.query(relName, seqOf(seqOf(args)));
             }
