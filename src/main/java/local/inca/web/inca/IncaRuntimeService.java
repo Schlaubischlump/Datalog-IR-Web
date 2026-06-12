@@ -12,6 +12,7 @@ import inca.frontend.oodl.executor.OODLExecutor;
 import inca.ir.CompiledUnit;
 import inca.ir.Module;
 import inca.ir.execution.ThreadCount;
+import inca.ir.visitors.BaseIRVisitor;
 import inca.souffle.frontend.executor.SouffleExecutor;
 import inca.util.compileroptions.CompilerOptions;
 import inca.viatra.backend.Executor;
@@ -19,12 +20,14 @@ import local.inca.web.api.request.IncaProgram;
 import local.inca.web.api.response.ExecutionResult;
 import org.eclipse.viatra.query.runtime.rete.matcher.TimelyReteBackendFactory;
 import org.springframework.stereotype.Service;
+import scala.Function0;
 import scala.collection.immutable.Seq;
 import scala.jdk.javaapi.CollectionConverters;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class IncaRuntimeService {
@@ -124,11 +127,18 @@ public class IncaRuntimeService {
                 yield loaded.query(relName, seqOf(seqOf(args)));
             }
             case FunctionalInca -> {
+                Optional<scala.collection.immutable.List<Function0<BaseIRVisitor>>> postProcessingPipeline = switch (prog.backend()) {
+                    case Viatra -> Optional.of(CompiledFunctionalUnit$.MODULE$.viatraPostProcessingPipeline());
+                    case DDLog  -> Optional.of(CompiledFunctionalUnit$.MODULE$.ddlogPostProcessingPipeline());
+                    default     -> Optional.empty();
+                };
+
                 var options = FunctionalCompilerOptions.fromResource(FUNCTIONAL_OPTIONS);
                 var exec = new FunctionalExecutor(executor);
                 var compiled = exec.compileFunction(code, options);
                 compiled.setPipeline(CompiledFunctionalUnit$.MODULE$.pipeline());
                 compiled.setOptimizationPipeline(CompiledFunctionalUnit$.MODULE$.optimizationPipeline());
+                postProcessingPipeline.ifPresent(compiled::setPostProcessingPipeline);
                 var loaded = exec.loadFunction(compiled);
                 yield loaded.execute(relName, seqOf(args));
             }
@@ -136,8 +146,15 @@ public class IncaRuntimeService {
                 var options = OODLCompilerOptions.fromResource(OODL_OPTIONS);
                 var exec = new OODLExecutor(executor);
                 var compiled = exec.compileOODL(code, options);
+
+                Optional<scala.collection.immutable.List<Function0<BaseIRVisitor>>> postProcessingPipeline = switch (prog.backend()) {
+                    case Viatra -> Optional.of(compiled.viatraPostProcessingPipeline());
+                    default     -> Optional.empty();
+                };
+
                 compiled.setPipeline(CompiledOODLUnit$.MODULE$.pipeline());
                 compiled.setOptimizationPipeline(CompiledOODLUnit$.MODULE$.optimizationPipeline());
+                postProcessingPipeline.ifPresent(compiled::setPostProcessingPipeline);
                 var loaded = exec.loadOODL(compiled);
                 yield loaded.execute(relName, seqOf(args));
             }
