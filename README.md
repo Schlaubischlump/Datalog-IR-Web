@@ -1,6 +1,6 @@
 # Datalog IR Web
 
-A browser-based runner for the Datalog. The app combines an Angular frontend with a Spring Boot backend that compiles and executes programs through the Datalog IR project.
+A browser-based runner for the Datalog IR. The app combines an Angular frontend with a Spring Boot backend that compiles and executes programs through the Datalog IR project.
 
 ![INCA Web screenshot](Screenshot.png)
 
