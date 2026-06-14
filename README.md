@@ -6,7 +6,7 @@ A browser-based runner for the Datalog IR. The app combines an Angular frontend 
 
 ## Features
 
-- Select an Datalog dialect: Datalog, Functional IncA, OODL, or Soufflé
+- Select a Datalog dialect: Datalog, Functional IncA, OODL, or Soufflé
 - Select an execution engine: Viatra, Soufflé, Interpreter, DDLog, or Ascent
 - Load sample programs per dialect
 - Enter and run queries such as `R(?, 4)` or `main(1, "A")`
